@@ -29,7 +29,7 @@ requiredFiles = [".replit", "replit.nix", ".config", "venv"]
 expertMode = true
 
 [deployment]
-deploymentTarget = "vm"
+deploymentTarget = "cloudrun"
 run = ["python3", "main.py"]
 
 [workflows]
