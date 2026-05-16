@@ -1,0 +1,66 @@
+# ---------------------------------------------------------------------------
+# Python
+# ---------------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# ---------------------------------------------------------------------------
+# Virtual environments / installed packages
+# ---------------------------------------------------------------------------
+.venv/
+venv/
+venv*/
+.pythonlibs/
+.upm/
+.cache/
+
+# ---------------------------------------------------------------------------
+# Replit-specific state (workspace metadata, agent files, breakpoints)
+# These are tied to the Replit workspace and should not be in the repo.
+# ---------------------------------------------------------------------------
+.replit
+.breakpoints
+.agents/
+.local/
+.config/
+.gitsafe/
+VENV.md
+"venv (deactivated)"/
+
+# ---------------------------------------------------------------------------
+# Raw uploads / scratch data
+# The canonical dataset lives in data/ — attached_assets/ holds the original
+# user upload which is byte-identical and inflates the repo unnecessarily.
+# ---------------------------------------------------------------------------
+attached_assets/
+
+# ---------------------------------------------------------------------------
+# Editor / OS noise
+# ---------------------------------------------------------------------------
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# ---------------------------------------------------------------------------
+# Logs and temp
+# ---------------------------------------------------------------------------
+*.log
+/tmp/
+logs/
+
+# ---------------------------------------------------------------------------
+# Secrets — never commit
+# ---------------------------------------------------------------------------
+.env
+.env.*
+!.env.example
