@@ -1,0 +1,274 @@
+{% extends "base.html" %}
+{% block title %}{{ summary.team.team_name }} &middot; NFL Draft Dash{% endblock %}
+
+{% block content %}
+<header class="page-header">
+  <div class="eyebrow">
+    <a href="/conference/{{ summary.team.conference }}">{{ summary.team.conference }}</a> &middot;
+    <a href="/division/{{ summary.team.conference }}/{{ summary.team.division }}">{{ summary.team.conference }} {{ summary.team.division }}</a>
+  </div>
+  <h1>{{ summary.team.team_name }}</h1>
+  <p class="lede">
+    Battle card &middot; first-round draft history, season-by-season record, and how
+    {{ summary.team.nickname }} top picks have shaped the franchise.
+  </p>
+</header>
+
+<div class="stat-grid">
+  <div class="stat">
+    <div class="label">R1 Picks</div>
+    <div class="value">{{ summary.totals.picks }}</div>
+  </div>
+  <div class="stat">
+    <div class="label">Hall of Famers</div>
+    <div class="value">{{ summary.totals.hof }}</div>
+    <div class="sub">{{ summary.totals.hit_rate_pct }}% hit rate</div>
+  </div>
+  <div class="stat">
+    <div class="label">Avg pick slot</div>
+    <div class="value">{{ summary.totals.avg_overall_pick }}</div>
+  </div>
+  <div class="stat">
+    <div class="label">Highest pick</div>
+    <div class="value">#{{ summary.totals.earliest_pick or '—' }}</div>
+    {% if summary.totals.earliest_pick_player %}
+    <div class="sub">{{ summary.totals.earliest_pick_player }} &middot; {{ summary.totals.earliest_pick_year }}</div>
+    {% endif %}
+  </div>
+  <div class="stat">
+    <div class="label">All-time record</div>
+    <div class="value">{{ summary.totals.total_wins }}&ndash;{{ summary.totals.total_losses }}{% if summary.totals.total_ties %}&ndash;{{ summary.totals.total_ties }}{% endif %}</div>
+    <div class="sub">{{ '%.3f'|format(summary.totals.overall_win_pct) }} win %</div>
+  </div>
+  <div class="stat">
+    <div class="label">Playoff seasons</div>
+    <div class="value">{{ summary.totals.playoff_seasons }}</div>
+    <div class="sub">of {{ summary.totals.seasons_played }}</div>
+  </div>
+</div>
+
+<section class="section">
+  <h2>The Story</h2>
+  <ul class="stories">
+    {% for s in stories %}<li>{{ s }}</li>{% endfor %}
+  </ul>
+</section>
+
+<div class="grid-2">
+  <div class="chart-card">
+    <h3>Wins per Season</h3>
+    <div class="chart-wrap"><canvas id="recordChart"></canvas></div>
+  </div>
+  <div class="chart-card">
+    <h3>R1 Pick Slot by Year</h3>
+    <div class="chart-wrap"><canvas id="pickSlotChart"></canvas></div>
+  </div>
+</div>
+
+<div class="grid-2">
+  <div class="chart-card">
+    <h3>Position Breakdown</h3>
+    <div class="chart-wrap"><canvas id="posBreakdown"></canvas></div>
+  </div>
+  <div class="chart-card">
+    <h3>Point Differential by Season</h3>
+    <div class="chart-wrap"><canvas id="diffChart"></canvas></div>
+  </div>
+</div>
+
+<section class="section">
+  <h2>Impact of Top-10 Picks (Next-Season Wins Delta)</h2>
+  {% if summary.top10_impacts %}
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Draft Year</th>
+          <th class="num">Pick</th>
+          <th>Player</th>
+          <th class="num">Prior-Year Wins</th>
+          <th class="num">New-Year Wins</th>
+          <th class="num">Delta</th>
+          <th>HoF?</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for i in summary.top10_impacts %}
+        <tr>
+          <td>{{ i.year }}</td>
+          <td class="num">#{{ i.pick }}</td>
+          <td>
+            {{ i.player }}
+            {% if i.additional_picks %}
+              <div style="font-size:0.75rem;color:var(--text-mute);margin-top:2px;">
+                + {% for ap in i.additional_picks %}#{{ ap.pick }} {{ ap.player }}{% if not loop.last %}, {% endif %}{% endfor %}
+              </div>
+            {% endif %}
+          </td>
+          <td class="num">{{ i.prior_wins }}</td>
+          <td class="num">{{ i.new_wins }}</td>
+          <td class="num" style="color: {{ '#4ade80' if i.delta > 0 else '#f87171' if i.delta < 0 else '#888' }}">
+            {{ '%+d'|format(i.delta) }}
+          </td>
+          <td>{% if i.hof %}<span class="badge">HoF</span>{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p style="color: var(--text-mute); font-size: 0.88rem;">
+    No top-10 selections with comparable prior-season data in the dataset.
+  </p>
+  {% endif %}
+</section>
+
+{% if summary.hof_picks %}
+<section class="section">
+  <h2>Hall of Fame Selections</h2>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>Year</th><th class="num">Pick</th><th>Player</th><th>Pos</th><th>College</th></tr>
+      </thead>
+      <tbody>
+        {% for p in summary.hof_picks %}
+        <tr>
+          <td>{{ p.year }}</td>
+          <td class="num">#{{ p.overall_pick }}</td>
+          <td>{{ p.player }}</td>
+          <td>{{ p.position }}</td>
+          <td>{{ p.college }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+
+<section class="section">
+  <h2>Every First-Round Pick</h2>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>Year</th><th class="num">Pick</th><th>Player</th><th>Pos</th><th>College</th><th>HoF</th></tr>
+      </thead>
+      <tbody>
+        {% for p in summary.all_picks %}
+        <tr>
+          <td>{{ p.year }}</td>
+          <td class="num">#{{ p.overall_pick or '—' }}</td>
+          <td>{{ p.player }}</td>
+          <td>{{ p.position }}</td>
+          <td>{{ p.college }}</td>
+          <td>{% if p.hall_of_fame %}<span class="badge">HoF</span>{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  Chart.defaults.color = '#888';
+  Chart.defaults.borderColor = '#1e1e1e';
+  const PALETTE = ['#4ade80','#60a5fa','#f472b6','#fbbf24','#a78bfa','#34d399','#f87171','#22d3ee','#fb923c'];
+
+  const record = {{ summary.record_series | tojson }};
+  const picks  = {{ summary.pick_slot_series | tojson }};
+  const posBreakdown = {{ summary.position_breakdown | tojson }};
+
+  // Wins per season
+  new Chart(document.getElementById('recordChart'), {
+    type: 'line',
+    data: {
+      labels: record.map(r => r.season),
+      datasets: [{
+        label: 'Wins',
+        data: record.map(r => r.wins),
+        borderColor: '#4ade80',
+        backgroundColor: 'rgba(74,222,128,0.15)',
+        tension: 0.3,
+        fill: true,
+        pointRadius: 2,
+      }]
+    },
+    options: {
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: { y: { grid: { color: '#1a1a1a' }, beginAtZero: true }, x: { grid: { display: false } } }
+    }
+  });
+
+  // Pick slot (inverted — lower = better, so we'll display normally but the user expects lower bars = earlier picks)
+  new Chart(document.getElementById('pickSlotChart'), {
+    type: 'bar',
+    data: {
+      labels: picks.map(p => p.year),
+      datasets: [{
+        label: 'Overall Pick',
+        data: picks.map(p => p.overall_pick),
+        backgroundColor: picks.map(p => p.overall_pick <= 10 ? '#fbbf24' : '#60a5fa'),
+        borderRadius: 3,
+      }]
+    },
+    options: {
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: ctx => `#${ctx.parsed.y} — ${picks[ctx.dataIndex].player}`
+          }
+        }
+      },
+      scales: {
+        y: { reverse: true, grid: { color: '#1a1a1a' }, beginAtZero: false,
+             title: { display: true, text: 'Pick # (lower = earlier)', color: '#666' } },
+        x: { grid: { display: false } }
+      }
+    }
+  });
+
+  // Position breakdown
+  new Chart(document.getElementById('posBreakdown'), {
+    type: 'bar',
+    data: {
+      labels: posBreakdown.map(p => p.group),
+      datasets: [{
+        label: 'Picks',
+        data: posBreakdown.map(p => p.count),
+        backgroundColor: PALETTE,
+        borderRadius: 4,
+      }]
+    },
+    options: {
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: { y: { grid: { color: '#1a1a1a' }, beginAtZero: true }, x: { grid: { display: false } } }
+    }
+  });
+
+  // Point differential
+  new Chart(document.getElementById('diffChart'), {
+    type: 'bar',
+    data: {
+      labels: record.map(r => r.season),
+      datasets: [{
+        label: 'Point Differential',
+        data: record.map(r => r.point_differential),
+        backgroundColor: record.map(r => r.point_differential >= 0 ? '#4ade80' : '#f87171'),
+        borderRadius: 2,
+      }]
+    },
+    options: {
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: { y: { grid: { color: '#1a1a1a' } }, x: { grid: { display: false } } }
+    }
+  });
+</script>
+{% endblock %}

@@ -1,0 +1,196 @@
+{% extends "base.html" %}
+{% block title %}League Dashboard &middot; NFL Draft Dash{% endblock %}
+
+{% block content %}
+<header class="page-header">
+  <div class="eyebrow">League Overview</div>
+  <h1>57 Years of First-Round Decisions</h1>
+  <p class="lede">
+    The story of the modern NFL told through every Round-1 pick since the AFL-NFL
+    merger — who teams chose, which colleges produced stars, and how the league's
+    draft priorities have shifted decade by decade.
+  </p>
+</header>
+
+<div class="stat-grid">
+  <div class="stat">
+    <div class="label">Draft years</div>
+    <div class="value">{{ league.totals.draft_years }}</div>
+    <div class="sub">1970&ndash;2026</div>
+  </div>
+  <div class="stat">
+    <div class="label">First-round picks</div>
+    <div class="value">{{ league.totals.picks }}</div>
+  </div>
+  <div class="stat">
+    <div class="label">Hall of Famers</div>
+    <div class="value">{{ league.totals.hof }}</div>
+    <div class="sub">{{ league.totals.hof_rate_pct }}% hit rate</div>
+  </div>
+  <div class="stat">
+    <div class="label">Current franchises</div>
+    <div class="value">{{ league.totals.teams }}</div>
+  </div>
+  <div class="stat">
+    <div class="label">Seasons of standings</div>
+    <div class="value">{{ league.totals.season_years }}</div>
+  </div>
+</div>
+
+<section class="section">
+  <h2>The Story</h2>
+  <ul class="stories">
+    {% for s in stories %}<li>{{ s }}</li>{% endfor %}
+  </ul>
+</section>
+
+<div class="grid-2">
+  <div class="chart-card">
+    <h3>HoF Hit Rate by Decade</h3>
+    <div class="chart-wrap"><canvas id="hofDecadeChart"></canvas></div>
+  </div>
+  <div class="chart-card">
+    <h3>Position Group Distribution</h3>
+    <div class="chart-wrap"><canvas id="positionPieChart"></canvas></div>
+  </div>
+</div>
+
+<div class="chart-card">
+  <h3>Position Trends Across Decades</h3>
+  <div class="chart-wrap" style="height:340px;"><canvas id="positionTrendChart"></canvas></div>
+</div>
+
+<div class="grid-2">
+  <div class="section">
+    <h2>Top HoF-Producing Colleges</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>College</th><th class="num">HoFers</th></tr></thead>
+        <tbody>
+          {% for c in league.top_hof_colleges %}
+          <tr><td>{{ c.college }}</td><td class="num">{{ c.count }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="section">
+    <h2>Most-Drafted Colleges (Volume)</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>College</th><th class="num">Picks</th></tr></thead>
+        <tbody>
+          {% for c in league.top_volume_colleges %}
+          <tr><td>{{ c.college }}</td><td class="num">{{ c.count }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<section class="section">
+  <h2>Hall of Fame Leaderboard by Franchise</h2>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Team</th>
+          <th class="num">HoFers</th>
+          <th class="num">Picks</th>
+          <th class="num">Hit %</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in league.hof_by_team %}
+        <tr>
+          <td><a href="/team/{{ r.abbr }}">{{ r.team }}</a></td>
+          <td class="num">{{ r.hof }}</td>
+          <td class="num">{{ r.picks }}</td>
+          <td class="num">{{ r.hit_rate_pct }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const PALETTE = ['#4ade80','#60a5fa','#f472b6','#fbbf24','#a78bfa','#34d399','#f87171','#22d3ee','#fb923c'];
+  Chart.defaults.color = '#888';
+  Chart.defaults.borderColor = '#1e1e1e';
+  Chart.defaults.font.family = "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+
+  // HoF rate by decade
+  {% set decades = league.hof_rate_by_decade %}
+  new Chart(document.getElementById('hofDecadeChart'), {
+    type: 'bar',
+    data: {
+      labels: {{ decades | map(attribute='decade') | list | tojson }},
+      datasets: [{
+        label: 'HoF %',
+        data: {{ decades | map(attribute='hof_rate_pct') | list | tojson }},
+        backgroundColor: '#4ade80',
+        borderRadius: 6,
+      }]
+    },
+    options: {
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { ticks: { callback: v => v + '%' }, grid: { color: '#1a1a1a' } },
+        x: { grid: { display: false } }
+      }
+    }
+  });
+
+  // Position distribution doughnut
+  {% set posdist = league.position_distribution %}
+  new Chart(document.getElementById('positionPieChart'), {
+    type: 'doughnut',
+    data: {
+      labels: {{ posdist | map(attribute='group') | list | tojson }},
+      datasets: [{
+        data: {{ posdist | map(attribute='count') | list | tojson }},
+        backgroundColor: PALETTE,
+        borderColor: '#0a0a0a',
+        borderWidth: 2
+      }]
+    },
+    options: {
+      maintainAspectRatio: false,
+      plugins: { legend: { position: 'right', labels: { boxWidth: 12 } } }
+    }
+  });
+
+  // Position trends across decades (stacked area)
+  {% set trends = league.position_trends %}
+  const trendDecades = {{ trends.decades | tojson }};
+  const trendSeries = {{ trends.series | tojson }};
+  new Chart(document.getElementById('positionTrendChart'), {
+    type: 'line',
+    data: {
+      labels: trendDecades,
+      datasets: Object.keys(trendSeries).map((g, i) => ({
+        label: g,
+        data: trendSeries[g],
+        borderColor: PALETTE[i % PALETTE.length],
+        backgroundColor: PALETTE[i % PALETTE.length] + '33',
+        tension: 0.3,
+        fill: false,
+        pointRadius: 3,
+      }))
+    },
+    options: {
+      maintainAspectRatio: false,
+      plugins: { legend: { position: 'bottom', labels: { boxWidth: 12 } } },
+      scales: {
+        y: { grid: { color: '#1a1a1a' } },
+        x: { grid: { display: false } }
+      }
+    }
+  });
+</script>
+{% endblock %}

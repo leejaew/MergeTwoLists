@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}NFL Draft Dashboard{% endblock %}</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0a0a0a;
+      --panel: #111;
+      --panel-2: #161616;
+      --border: #1e1e1e;
+      --border-soft: #1a1a1a;
+      --text: #f0f0f0;
+      --text-dim: #888;
+      --text-mute: #555;
+      --text-faint: #333;
+      --accent: #4ade80;
+      --accent-dim: #166534;
+      --warn: #fbbf24;
+    }
+
+    html, body { background: var(--bg); color: var(--text); }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    a { color: inherit; text-decoration: none; }
+
+    /* ---------- Top nav ---------- */
+    .topnav {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: rgba(10, 10, 10, 0.92);
+      backdrop-filter: saturate(160%) blur(8px);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      flex-wrap: wrap;
+    }
+
+    .brand {
+      font-size: 0.95rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .brand .dot { color: var(--accent); }
+
+    .nav-links {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .nav-links a, .nav-pill {
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      background: var(--panel);
+      transition: color 0.12s, border-color 0.12s;
+    }
+
+    .nav-links a:hover { color: #ccc; border-color: #2e2e2e; }
+    .nav-links a.active { background: #fff; color: var(--bg); border-color: #fff; }
+
+    .team-select {
+      margin-left: auto;
+      background: var(--panel);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 6px 10px;
+      font-size: 0.8rem;
+      font-family: inherit;
+    }
+
+    /* ---------- Layout ---------- */
+    main {
+      width: 100%;
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 36px 20px 64px;
+      flex: 1;
+    }
+
+    .page-header {
+      margin-bottom: 28px;
+    }
+
+    .page-header .eyebrow {
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text-mute);
+      margin-bottom: 8px;
+    }
+
+    .page-header h1 {
+      font-size: 1.9rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: #fff;
+    }
+
+    .page-header .lede {
+      margin-top: 8px;
+      font-size: 0.92rem;
+      color: var(--text-dim);
+      max-width: 720px;
+      line-height: 1.5;
+    }
+
+    /* ---------- Stat tiles ---------- */
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 10px;
+      margin-bottom: 28px;
+    }
+
+    .stat {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px 16px;
+    }
+
+    .stat .label {
+      font-size: 0.7rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-mute);
+    }
+
+    .stat .value {
+      margin-top: 6px;
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: -0.01em;
+    }
+
+    .stat .sub {
+      margin-top: 2px;
+      font-size: 0.72rem;
+      color: var(--text-faint);
+    }
+
+    /* ---------- Cards / sections ---------- */
+    .section {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 18px 20px;
+      margin-bottom: 18px;
+    }
+
+    .section h2 {
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      margin-bottom: 14px;
+    }
+
+    .section h3 {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 6px;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+    }
+
+    @media (max-width: 760px) {
+      .grid-2 { grid-template-columns: 1fr; }
+    }
+
+    /* ---------- Stories ---------- */
+    .stories {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .stories li {
+      padding: 11px 14px;
+      background: var(--panel-2);
+      border: 1px solid var(--border-soft);
+      border-left: 2px solid var(--accent-dim);
+      border-radius: 8px;
+      font-size: 0.88rem;
+      line-height: 1.5;
+      color: #d8d8d8;
+    }
+
+    /* ---------- Tables ---------- */
+    .table-wrap { overflow-x: auto; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+    }
+
+    th, td {
+      text-align: left;
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border-soft);
+    }
+
+    th {
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-mute);
+    }
+
+    td { color: #d0d0d0; }
+
+    tr:hover td { background: var(--panel-2); }
+
+    .num { font-variant-numeric: tabular-nums; text-align: right; }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      background: var(--accent-dim);
+      color: #d1fae5;
+    }
+
+    /* ---------- Chart cards ---------- */
+    .chart-card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 16px 18px;
+      margin-bottom: 18px;
+    }
+
+    .chart-card h3 {
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      margin-bottom: 12px;
+    }
+
+    .chart-wrap { position: relative; height: 280px; }
+
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 20px;
+      text-align: center;
+      font-size: 0.72rem;
+      color: var(--text-faint);
+    }
+  </style>
+  {% block head_extra %}{% endblock %}
+</head>
+<body>
+  <nav class="topnav">
+    <a href="/" class="brand">NFL Draft<span class="dot">.</span>Dash</a>
+    <div class="nav-links">
+      <a href="/" class="{{ 'active' if active == 'league' else '' }}">League</a>
+      <a href="/conference/AFC" class="{{ 'active' if active == 'conf:AFC' else '' }}">AFC</a>
+      <a href="/conference/NFC" class="{{ 'active' if active == 'conf:NFC' else '' }}">NFC</a>
+    </div>
+    <select class="team-select" onchange="if(this.value) window.location.href=this.value">
+      <option value="">Jump to team…</option>
+      {% for t in all_teams_sorted %}
+      <option value="/team/{{ t.abbreviation }}">{{ t.team_name }}</option>
+      {% endfor %}
+    </select>
+  </nav>
+
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer>
+    Data 1970&ndash;2026 &middot; First-round picks &amp; final regular-season standings &middot;
+    Sources: Pro Football Reference, nflverse, FootballDB
+  </footer>
+
+  {% block scripts %}{% endblock %}
+</body>
+</html>

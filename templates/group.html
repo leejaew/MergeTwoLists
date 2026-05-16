@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+{% block title %}{{ summary.label }} &middot; NFL Draft Dash{% endblock %}
+
+{% block content %}
+<header class="page-header">
+  <div class="eyebrow">{{ scope|title }} Analysis</div>
+  <h1>{{ summary.label }}</h1>
+  <p class="lede">
+    Aggregate draft and on-field performance across all current franchises in this group.
+  </p>
+</header>
+
+<div class="stat-grid">
+  <div class="stat"><div class="label">Teams</div><div class="value">{{ summary.totals.teams }}</div></div>
+  <div class="stat"><div class="label">R1 Picks</div><div class="value">{{ summary.totals.picks }}</div></div>
+  <div class="stat">
+    <div class="label">Hall of Famers</div>
+    <div class="value">{{ summary.totals.hof }}</div>
+    <div class="sub">{{ summary.totals.hit_rate_pct }}% hit rate</div>
+  </div>
+  <div class="stat">
+    <div class="label">Combined record</div>
+    <div class="value">{{ summary.totals.wins }}&ndash;{{ summary.totals.losses }}{% if summary.totals.ties %}&ndash;{{ summary.totals.ties }}{% endif %}</div>
+  </div>
+  <div class="stat">
+    <div class="label">Playoff seasons</div>
+    <div class="value">{{ summary.totals.playoff_seasons }}</div>
+  </div>
+</div>
+
+<section class="section">
+  <h2>The Story</h2>
+  <ul class="stories">
+    {% for s in stories %}<li>{{ s }}</li>{% endfor %}
+  </ul>
+</section>
+
+<div class="grid-2">
+  <div class="chart-card">
+    <h3>HoF Selections by Team</h3>
+    <div class="chart-wrap"><canvas id="hofByTeam"></canvas></div>
+  </div>
+  <div class="chart-card">
+    <h3>All-Time Win %</h3>
+    <div class="chart-wrap"><canvas id="winPctByTeam"></canvas></div>
+  </div>
+</div>
+
+<div class="chart-card">
+  <h3>Position Group Mix</h3>
+  <div class="chart-wrap"><canvas id="positionMix"></canvas></div>
+</div>
+
+<section class="section">
+  <h2>Team Leaderboard</h2>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Team</th>
+          <th class="num">HoFers</th>
+          <th class="num">Picks</th>
+          <th class="num">Hit %</th>
+          <th class="num">Record</th>
+          <th class="num">Win %</th>
+          <th class="num">Playoff Seasons</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in summary.team_rows %}
+        <tr>
+          <td><a href="/team/{{ r.abbr }}">{{ r.team }}</a></td>
+          <td class="num">{{ r.hof }}</td>
+          <td class="num">{{ r.picks }}</td>
+          <td class="num">{{ r.hit_rate_pct }}</td>
+          <td class="num">{{ r.wins }}&ndash;{{ r.losses }}{% if r.ties %}&ndash;{{ r.ties }}{% endif %}</td>
+          <td class="num">{{ '%.3f'|format(r.win_pct) }}</td>
+          <td class="num">{{ r.playoff_seasons }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const PALETTE = ['#4ade80','#60a5fa','#f472b6','#fbbf24','#a78bfa','#34d399','#f87171','#22d3ee','#fb923c'];
+  Chart.defaults.color = '#888';
+  Chart.defaults.borderColor = '#1e1e1e';
+
+  const rows = {{ summary.team_rows | tojson }};
+  const posMix = {{ summary.position_breakdown | tojson }};
+
+  new Chart(document.getElementById('hofByTeam'), {
+    type: 'bar',
+    data: {
+      labels: rows.map(r => r.abbr),
+      datasets: [{
+        label: 'HoFers',
+        data: rows.map(r => r.hof),
+        backgroundColor: '#4ade80',
+        borderRadius: 4,
+      }]
+    },
+    options: {
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: { y: { grid: { color: '#1a1a1a' }, beginAtZero: true }, x: { grid: { display: false } } }
+    }
+  });
+
+  // Sort by win pct for clarity
+  const sortedByPct = [...rows].sort((a,b) => b.win_pct - a.win_pct);
+  new Chart(document.getElementById('winPctByTeam'), {
+    type: 'bar',
+    data: {
+      labels: sortedByPct.map(r => r.abbr),
+      datasets: [{
+        label: 'Win %',
+        data: sortedByPct.map(r => r.win_pct),
+        backgroundColor: '#60a5fa',
+        borderRadius: 4,
+      }]
+    },
+    options: {
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { grid: { color: '#1a1a1a' }, beginAtZero: true, max: 1,
+             ticks: { callback: v => v.toFixed(2) } },
+        x: { grid: { display: false } }
+      }
+    }
+  });
+
+  new Chart(document.getElementById('positionMix'), {
+    type: 'bar',
+    data: {
+      labels: posMix.map(p => p.group),
+      datasets: [{
+        label: 'Picks',
+        data: posMix.map(p => p.count),
+        backgroundColor: PALETTE,
+        borderRadius: 4,
+      }]
+    },
+    options: {
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: { y: { grid: { color: '#1a1a1a' } }, x: { grid: { display: false } } }
+    }
+  });
+</script>
+{% endblock %}
