@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NFL Teams</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0a0a0a;
+      color: #f0f0f0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 48px 16px;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 36px;
+    }
+
+    header h1 {
+      font-size: 1.6rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: #fff;
+    }
+
+    header p {
+      margin-top: 6px;
+      font-size: 0.85rem;
+      color: #666;
+    }
+
+    .filter-bar {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 32px;
+    }
+
+    .filter-bar a {
+      text-decoration: none;
+      padding: 8px 20px;
+      border-radius: 999px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      border: 1px solid #2a2a2a;
+      color: #888;
+      background: #111;
+      transition: all 0.15s ease;
+    }
+
+    .filter-bar a:hover {
+      border-color: #444;
+      color: #ccc;
+    }
+
+    .filter-bar a.active {
+      background: #fff;
+      color: #0a0a0a;
+      border-color: #fff;
+    }
+
+    .card {
+      width: 100%;
+      max-width: 480px;
+      background: #111;
+      border: 1px solid #1e1e1e;
+      border-radius: 16px;
+      overflow: hidden;
+    }
+
+    .card-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid #1e1e1e;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .card-header span {
+      font-size: 0.78rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #555;
+    }
+
+    .card-header .count {
+      font-size: 0.78rem;
+      color: #444;
+    }
+
+    .team-list {
+      list-style: none;
+    }
+
+    .team-list li {
+      padding: 13px 20px;
+      font-size: 0.9rem;
+      color: #ccc;
+      border-bottom: 1px solid #161616;
+      transition: background 0.1s ease;
+    }
+
+    .team-list li:last-child {
+      border-bottom: none;
+    }
+
+    .team-list li:hover {
+      background: #161616;
+      color: #fff;
+    }
+
+    footer {
+      margin-top: 40px;
+      font-size: 0.75rem;
+      color: #333;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>NFL Teams</h1>
+    <p>Browse by conference</p>
+  </header>
+
+  <div class="filter-bar">
+    <a href="/?conference=NFL" class="{{ 'active' if active == 'NFL' else '' }}">All</a>
+    <a href="/?conference=AFC" class="{{ 'active' if active == 'AFC' else '' }}">AFC</a>
+    <a href="/?conference=NFC" class="{{ 'active' if active == 'NFC' else '' }}">NFC</a>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <span>{{ label }}</span>
+      <span class="count">{{ teams|length }} teams</span>
+    </div>
+    <ul class="team-list">
+      {% for team in teams %}
+      <li>{{ team }}</li>
+      {% endfor %}
+    </ul>
+  </div>
+
+  <footer>Data current as of the 2024 season</footer>
+</body>
+</html>
